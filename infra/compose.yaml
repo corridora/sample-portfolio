@@ -1,0 +1,68 @@
+name: corridora-portfolio
+services:
+  app:
+    image: ${SAMPLE_IMAGE}
+    restart: unless-stopped
+    mem_limit: 192m
+    cpus: 0.5
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    environment:
+      CORRIDORA_OTLP_ENDPOINT: http://collector:4318
+    volumes:
+      - ./config.json:/app/.sample/config.json:ro
+      - ./secrets.json:/app/.sample/secrets.json:ro
+      - ./storage:/app/storage
+      - ./bootstrap/cache:/app/bootstrap/cache
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 64
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./storage/caddy:/var/log/caddy
+    depends_on: [app]
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.137.0
+    user: "0:0"
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports: ["127.0.0.1:4318:4318"]
+    volumes:
+      - ./collector.yaml:/etc/otelcol/config.yaml:ro
+      - /:/hostfs:ro
+      - ./storage/caddy:/var/log/caddy:ro
+      - collector_state:/var/lib/otelcol
+  runner:
+    image: ${RUNNER_IMAGE:-corridora-sample-portfolio-runner:local}
+    profiles: [synthetics]
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 160
+    shm_size: 64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - ./config.json:/runner/.sample/config.json:ro
+      - ./secrets.json:/runner/.sample/secrets.json:ro
+    depends_on: [caddy]
+volumes:
+  caddy_data:
+  caddy_config:
+  collector_state:

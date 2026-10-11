@@ -1,0 +1,29 @@
+name: Daily portfolio incident and watchdog
+on:
+  schedule:
+    - cron: '20 14 * * *'
+    - cron: '0 15,18,22 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: portfolio-daily
+  cancel-in-progress: false
+jobs:
+  journey:
+    if: github.repository_owner == 'corridora' && vars.ENABLE_DAILY_JOURNEY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      BASE_URL: ${{ vars.SAMPLE_URL }}
+      DEMO_CONTROL_TOKEN: ${{ secrets.DEMO_CONTROL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Run incident or replay missing heartbeat
+        run: python3 scripts/watchdog_once.py

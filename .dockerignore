@@ -1,0 +1,9 @@
+.git
+.sample
+.tools
+vendor
+node_modules
+storage
+bootstrap/cache
+playwright-report
+test-results

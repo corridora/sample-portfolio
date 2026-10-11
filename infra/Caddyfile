@@ -1,0 +1,24 @@
+__HOSTNAME__ {
+    encode zstd gzip
+    reverse_proxy app:4105 {
+        header_up traceparent {http.request.header.traceparent}
+        header_up tracestate {http.request.header.tracestate}
+    }
+    log {
+        output file /var/log/caddy/access.json {
+            roll_size 5MiB
+            roll_keep 2
+            roll_keep_for 48h
+        }
+        format filter {
+            wrap json
+            fields {
+                request>headers>Authorization delete
+                request>headers>Cookie delete
+                request>remote_ip delete
+                request>remote_port delete
+                request>client_ip delete
+            }
+        }
+    }
+}

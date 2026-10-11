@@ -1,0 +1,12 @@
+[Unit]
+Description=Read-only Linode stats adapter for Corridora portfolio
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/corridora-portfolio/provider_adapter.py
+MemoryMax=64M
+CPUQuota=10%
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true

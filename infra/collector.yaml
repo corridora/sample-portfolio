@@ -1,0 +1,88 @@
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol/storage
+    create_directory: true
+    fsync: true
+    compaction:
+      on_start: true
+      on_rebound: true
+      directory: /var/lib/otelcol/compaction
+      cleanup_on_start: true
+      rebound_needed_threshold_mib: 16
+      rebound_trigger_threshold_mib: 4
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+  hostmetrics:
+    root_path: /hostfs
+    collection_interval: 60s
+    scrapers:
+      cpu: {}
+      memory: {}
+      load: {}
+      disk: {}
+      filesystem: {}
+      network: {}
+  filelog/caddy:
+    include: [/var/log/caddy/access*.json, /var/log/caddy/access*.json.gz]
+    compression: auto
+    start_at: beginning
+    storage: file_storage
+    max_concurrent_files: 3
+    max_log_size: 64KiB
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 30s
+    operators:
+      - type: json_parser
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 96
+    spike_limit_mib: 24
+  batch:
+    timeout: 5s
+    send_batch_size: 32
+    send_batch_max_size: 32
+  resource/host:
+    attributes:
+      - key: service.name
+        value: sample-portfolio-host
+        action: insert
+      - key: service.namespace
+        value: corridora-samples.portfolio
+        action: insert
+      - key: cloud.provider
+        value: akamai
+        action: insert
+exporters:
+  otlphttp/corridora:
+    endpoint: __EXPORT_ENDPOINT__
+    encoding: json
+    headers:
+      X-CORRIDORA-KEY: __EXPORT_KEY__
+    timeout: 5s
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 30s
+    sending_queue:
+      num_consumers: 2
+      queue_size: 32
+      storage: file_storage
+service:
+  extensions: [file_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/corridora]
+    logs:
+      receivers: [otlp, filelog/caddy]
+      processors: [memory_limiter, resource/host, batch]
+      exporters: [otlphttp/corridora]
+    metrics:
+      receivers: [otlp, hostmetrics]
+      processors: [memory_limiter, resource/host, batch]
+      exporters: [otlphttp/corridora]

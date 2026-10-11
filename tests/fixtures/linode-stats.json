@@ -1,0 +1,9 @@
+{
+  "title": "CPU, IO, and Network Statistics",
+  "data": {
+    "cpu": [[1700000000000, 2.5], [1700000001000, 3.5]],
+    "io": {"io": [], "swap": []},
+    "netv4": {"in": [], "out": [], "private_in": [], "private_out": []},
+    "netv6": {"in": [], "out": []}
+  }
+}

@@ -1,0 +1,9 @@
+[Unit]
+Description=Poll Linode native metrics every fifteen minutes
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+RandomizedDelaySec=30
+Persistent=true
+[Install]
+WantedBy=timers.target
